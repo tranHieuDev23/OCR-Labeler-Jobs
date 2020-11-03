@@ -1,0 +1,8 @@
+target
+.settings
+.project
+.classpath
+.vscode
+.git
+.gitignore
+Dockerfile
