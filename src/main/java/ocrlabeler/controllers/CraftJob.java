@@ -32,8 +32,8 @@ public class CraftJob implements Job {
 
     static {
         Dotenv dotenv = Utils.DOTENV;
-        String craftHost = dotenv.get("CRAFT_HOST", "localhost");
-        String craftPort = dotenv.get("CRAFT_PORT", "8000");
+        String craftHost = dotenv.get("CRAFT_HOST");
+        String craftPort = dotenv.get("CRAFT_PORT");
         String craftApi = new StringBuilder("http://").append(craftHost).append(':').append(craftPort)
                 .append("/query_box").toString();
         try {
@@ -66,7 +66,7 @@ public class CraftJob implements Job {
                 itemThread.start();
             }
         } catch (SQLException e) {
-            throw new JobExecutionException("Failed to run  SELECT SQL query", e);
+            throw new JobExecutionException("Failed to run SELECT SQL query", e);
         }
     }
 
