@@ -80,14 +80,14 @@ public class CraftJob implements Job {
             e.printStackTrace();
             return null;
         }
-        HttpResponse<String> response;
+        JsonElement json;
         try {
-            response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
+            HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
+            json = JsonParser.parseString(response.body());
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
-        JsonElement json = JsonParser.parseString(response.body());
         JsonElement regionJsonArray = json.getAsJsonObject().get("regions");
         List<TextRegion> regionList = new ArrayList<>();
         for (JsonElement item : regionJsonArray.getAsJsonArray()) {
