@@ -21,6 +21,8 @@ public class DatabaseInstance {
             + "WHERE \"BlacklistedJwts\".exp < EXTRACT(epoch FROM (NOW() - INTERVAL '30 DAY'));";
     private final String SELECT_UNPROCESSED_IMAGES_QUERY = "SELECT \"imageId\", \"imageUrl\", \"uploadedBy\" FROM public.\"Images\"\n"
             + "WHERE \"Images\".status = 'NotProcessed' ORDER BY \"Images\".\"uploadedDate\" DESC LIMIT ?;";
+    private final String RESET_PROCESSING_IMAGES_QUERY = "UPDATE public.\"Images\" SET status = ?\n"
+            + "WHERE \"Images\".status = 'Processing";
     private final String ADD_REGION_QUERY = "INSERT INTO public.\"TextRegions\"(\n"
             + "\"regionId\", \"imageId\", region, label, status, \"uploadedBy\", \"labeledBy\", \"verifiedBy\")\n"
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
@@ -64,6 +66,11 @@ public class DatabaseInstance {
     public void dumpJwt() throws SQLException {
         Statement st = conn.createStatement();
         st.executeQuery(DUMP_JWT_QUERY);
+    }
+
+    public void resetProcessingImage() throws SQLException {
+        Statement st = conn.createStatement();
+        st.executeQuery(RESET_PROCESSING_IMAGES_QUERY);
     }
 
     public Image[] getUnprocessedImages() throws SQLException {

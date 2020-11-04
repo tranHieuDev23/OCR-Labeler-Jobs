@@ -1,5 +1,7 @@
 package ocrlabeler;
 
+import java.sql.SQLException;
+
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
@@ -13,14 +15,36 @@ import org.quartz.impl.StdSchedulerFactory;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import ocrlabeler.controllers.CraftJob;
+import ocrlabeler.controllers.DatabaseInstance;
 import ocrlabeler.controllers.DumpJwtJob;
 import ocrlabeler.controllers.Utils;
+import ocrlabeler.controllers.WaitFor;
 
 /**
  * Hello world!
  *
  */
 public class App {
+    private static final DatabaseInstance DB = DatabaseInstance.getInstance();
+
+    private static void waitForDB() {
+        Dotenv dotenv = Utils.DOTENV;
+        String dbHost = dotenv.get("POSTGRES_HOST");
+        int dbPort = Integer.parseInt(dotenv.get("POSTGRES_PORT"));
+        WaitFor.waitForPort(dbHost, dbPort, 3000);
+    }
+
+    private static void resetAllProcessing() {
+        try {
+            DB.resetProcessingImage();
+        } catch (SQLException e) {
+            System.err.println("Failed to reset all images with status Processing to NotProcessed. "
+                    + "This may indicate a problem with PostgresSQL server! Exitting...");
+            e.printStackTrace();
+            System.exit(0);
+        }
+    }
+
     private static void scheduleJwtDumpJob(Scheduler scheduler) throws SchedulerException {
         JobDetail job = JobBuilder.newJob(DumpJwtJob.class).withIdentity("DumpJwtJob").build();
         Trigger trigger = TriggerBuilder.newTrigger().withIdentity("DumpJwtTrigger").startNow()
@@ -38,6 +62,8 @@ public class App {
     }
 
     public static void main(String[] args) throws SchedulerException {
+        waitForDB();
+        resetAllProcessing();
         Dotenv dotenv = Utils.DOTENV;
         final int craftInterval = Integer.parseInt(dotenv.get("JOBS_CRAFT_INTERVAL"));
         SchedulerFactory schedFact = new StdSchedulerFactory();
