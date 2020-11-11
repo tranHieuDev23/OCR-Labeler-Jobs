@@ -19,18 +19,21 @@ import ocrlabeler.models.TextRegion;
 public class DatabaseInstance {
     private final String DUMP_JWT_QUERY = "DELETE FROM public.\"BlacklistedJwts\"\n"
             + "WHERE \"BlacklistedJwts\".exp < EXTRACT(epoch FROM (NOW() - INTERVAL '30 DAY'));";
-    private final String SELECT_UNPROCESSED_IMAGES_QUERY = "SELECT \"imageId\", \"imageUrl\", \"uploadedBy\" FROM public.\"Images\"\n"
-            + "WHERE \"Images\".status = 'NotProcessed' ORDER BY \"Images\".\"uploadedDate\" DESC LIMIT ?;";
     private final String RESET_PROCESSING_IMAGES_QUERY = "UPDATE public.\"Images\" SET status = 'NotProcessed'\n"
             + "WHERE \"Images\".status = 'Processing'";
+    private final String SELECT_IMAGES_WITH_STATUS_QUERY = "SELECT \"imageId\", \"imageUrl\", \"uploadedBy\" FROM public.\"Images\"\n"
+            + "WHERE \"Images\".status = ? ORDER BY \"Images\".\"uploadedDate\" DESC LIMIT ?;";
     private final String ADD_REGION_QUERY = "INSERT INTO public.\"TextRegions\"(\n"
             + "\"regionId\", \"imageId\", region, label, status, \"uploadedBy\", \"labeledBy\", \"verifiedBy\")\n"
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
     private final String UPDATE_IMAGE_STATUS_QUERY = "UPDATE public.\"Images\" SET status = ?\n"
             + "WHERE \"Images\".\"imageId\" = ?";
+    private final String SELECT_REGIONS_OF_IMAGE_QUERY = "SELECT * FROM public.\"TextRegions\"\n"
+            + "WHERE \"TextRegions\".\"imageId\" = ? AND \"TextRegions\".suggestion IS null AND \"TextRegions\".label IS null";
+    private final String UPDATE_REGION_SUGGESTION_QUERY = "UPDATE public.\"TextRegions\" SET suggestion = ?\n"
+            + "WHERE \"TextRegions\".\"regionId\" = ?";
 
     private final Connection conn;
-    private final int craftProcessLimit;
 
     private DatabaseInstance() {
         Dotenv dotenv = Utils.DOTENV;
@@ -49,7 +52,6 @@ public class DatabaseInstance {
             e.printStackTrace();
             throw new RuntimeException("Failed to connect to database", e);
         }
-        craftProcessLimit = Integer.parseInt(dotenv.get("JOBS_CRAFT_PROCESS_LIMIT"));
     }
 
     private String createDatabaseUrl(String databaseHost, String databasePort, String databaseDB) {
@@ -73,9 +75,10 @@ public class DatabaseInstance {
         st.execute(RESET_PROCESSING_IMAGES_QUERY);
     }
 
-    public Image[] getUnprocessedImages() throws SQLException {
-        PreparedStatement st = conn.prepareStatement(SELECT_UNPROCESSED_IMAGES_QUERY);
-        st.setInt(1, craftProcessLimit);
+    public Image[] getUnprocessedImages(ImageStatus status, int limit) throws SQLException {
+        PreparedStatement st = conn.prepareStatement(SELECT_IMAGES_WITH_STATUS_QUERY);
+        st.setString(1, status.name());
+        st.setInt(2, limit);
         ResultSet rs = st.executeQuery();
         if (!rs.next()) {
             return new Image[] {};
@@ -116,5 +119,32 @@ public class DatabaseInstance {
             regionSt.executeBatch();
         }
         setImageStatus(image, ImageStatus.Processed);
+    }
+
+    public TextRegion[] getRegionsOfImage(Image image) throws SQLException {
+        PreparedStatement st = conn.prepareStatement(SELECT_REGIONS_OF_IMAGE_QUERY);
+        st.setString(1, image.getImageId());
+        ResultSet rs = st.executeQuery();
+        if (!rs.next()) {
+            return new TextRegion[] {};
+        }
+        List<TextRegion> results = new ArrayList<>();
+        if (!rs.isAfterLast()) {
+            do {
+                String regionId = rs.getString("regionId");
+                String verticeStr = rs.getString("region");
+                TextRegion newTextRegion = TextRegion.parseFromString(verticeStr);
+                newTextRegion.setRegionId(regionId);
+                results.add(newTextRegion);
+            } while (rs.next());
+        }
+        return results.toArray(new TextRegion[0]);
+    }
+
+    public void updateRegionSuggestion(String regionId, String suggestion) throws SQLException {
+        PreparedStatement st = conn.prepareStatement(UPDATE_REGION_SUGGESTION_QUERY);
+        st.setString(1, suggestion);
+        st.setString(2, regionId);
+        st.execute();
     }
 }

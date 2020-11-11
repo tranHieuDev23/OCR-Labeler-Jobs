@@ -1,5 +1,5 @@
 package ocrlabeler.models;
 
 public enum ImageStatus {
-    NotProcessed, Processing, Processed, Published
+    NotProcessed, Processing, Processed, PrePublished, Published
 }

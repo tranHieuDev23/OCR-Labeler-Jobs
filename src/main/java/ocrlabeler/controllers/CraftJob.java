@@ -29,6 +29,7 @@ public class CraftJob implements Job {
     private static final DatabaseInstance DB = DatabaseInstance.getInstance();
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final URI CRAFT_URI;
+    private static final int CRAFT_PROCESS_LIMIT;
 
     static {
         Dotenv dotenv = Utils.DOTENV;
@@ -42,12 +43,13 @@ public class CraftJob implements Job {
             e.printStackTrace();
             throw new RuntimeException("Failed to build CRAFT URI", e);
         }
+        CRAFT_PROCESS_LIMIT = Integer.parseInt(dotenv.get("JOBS_CRAFT_PROCESS_LIMIT"));
     }
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
         try {
-            Image[] unprocessedImages = DB.getUnprocessedImages();
+            Image[] unprocessedImages = DB.getUnprocessedImages(ImageStatus.NotProcessed, CRAFT_PROCESS_LIMIT);
             for (Image item : unprocessedImages) {
                 Thread itemThread = new Thread(() -> {
                     try {

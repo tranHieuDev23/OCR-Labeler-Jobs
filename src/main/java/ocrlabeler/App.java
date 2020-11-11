@@ -17,6 +17,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import ocrlabeler.controllers.CraftJob;
 import ocrlabeler.controllers.DatabaseInstance;
 import ocrlabeler.controllers.DumpJwtJob;
+import ocrlabeler.controllers.SuggestorJob;
 import ocrlabeler.controllers.Utils;
 import ocrlabeler.controllers.WaitFor;
 
@@ -61,15 +62,26 @@ public class App {
         scheduler.scheduleJob(job, trigger);
     }
 
+    private static void scheduleSuggestorJob(Scheduler scheduler, int intervalInSeconds) throws SchedulerException {
+        JobDetail job = JobBuilder.newJob(SuggestorJob.class).withIdentity("SuggestorJob").build();
+        Trigger trigger = TriggerBuilder.newTrigger().withIdentity("SuggestorTrigger").startNow()
+                .withSchedule(
+                        SimpleScheduleBuilder.simpleSchedule().withIntervalInSeconds(intervalInSeconds).repeatForever())
+                .build();
+        scheduler.scheduleJob(job, trigger);
+    }
+
     public static void main(String[] args) throws SchedulerException {
         waitForDB();
         resetAllProcessing();
         Dotenv dotenv = Utils.DOTENV;
         final int craftInterval = Integer.parseInt(dotenv.get("JOBS_CRAFT_INTERVAL"));
+        final int suggestorInterval = Integer.parseInt(dotenv.get("JOBS_SUGGESTOR_INTERVAL"));
         SchedulerFactory schedFact = new StdSchedulerFactory();
         Scheduler scheduler = schedFact.getScheduler();
         scheduler.start();
         scheduleJwtDumpJob(scheduler);
         scheduleCraftJob(scheduler, craftInterval);
+        scheduleSuggestorJob(scheduler, suggestorInterval);
     }
 }
