@@ -89,7 +89,6 @@ public class SuggestorJob implements Job {
         for (int i = 0; i < regions.length; i++) {
             DB.updateRegionSuggestion(regions[i].getRegionId(), regionJsonArray.get(i).getAsString());
         }
-        DB.setImageStatus(image, ImageStatus.Published);
     }
 
     private HttpEntity requestBody(Image image, TextRegion[] regions) {
