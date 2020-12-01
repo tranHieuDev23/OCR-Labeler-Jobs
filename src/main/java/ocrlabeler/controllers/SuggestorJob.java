@@ -38,6 +38,7 @@ public class SuggestorJob implements Job {
     private static final DatabaseInstance DB = DatabaseInstance.getInstance();
     private static final HttpClient HTTP_CLIENT = HttpClients.createDefault();
     private static final URI SUGGESTOR_URI;
+    private static final int REGION_LIMIT;
 
     static {
         Dotenv dotenv = Utils.DOTENV;
@@ -51,6 +52,7 @@ public class SuggestorJob implements Job {
             e.printStackTrace();
             throw new RuntimeException("Failed to build CRAFT URI", e);
         }
+        REGION_LIMIT = Integer.parseInt(dotenv.get("JOBS_SUGGESTOR_REGION_LIMIT"));
     }
 
     @Override
@@ -73,7 +75,7 @@ public class SuggestorJob implements Job {
     }
 
     private void handleImage(Image image) throws SQLException, ClientProtocolException, IOException {
-        TextRegion[] regions = DB.getRegionsOfImage(image);
+        TextRegion[] regions = DB.getRegionsOfImage(image, REGION_LIMIT);
         if (regions.length == 0) {
             DB.setImageStatus(image, ImageStatus.Published);
             return;

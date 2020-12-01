@@ -29,7 +29,7 @@ public class DatabaseInstance {
     private final String UPDATE_IMAGE_STATUS_QUERY = "UPDATE public.\"Images\" SET status = ?\n"
             + "WHERE \"Images\".\"imageId\" = ?";
     private final String SELECT_REGIONS_OF_IMAGE_QUERY = "SELECT * FROM public.\"TextRegions\"\n"
-            + "WHERE \"TextRegions\".\"imageId\" = ? AND \"TextRegions\".suggestion IS null AND \"TextRegions\".label IS null";
+            + "WHERE \"TextRegions\".\"imageId\" = ? AND \"TextRegions\".suggestion IS null AND \"TextRegions\".label IS null LIMIT ?";
     private final String UPDATE_REGION_SUGGESTION_QUERY = "UPDATE public.\"TextRegions\" SET suggestion = ?\n"
             + "WHERE \"TextRegions\".\"regionId\" = ?";
 
@@ -121,9 +121,10 @@ public class DatabaseInstance {
         setImageStatus(image, ImageStatus.Processed);
     }
 
-    public TextRegion[] getRegionsOfImage(Image image) throws SQLException {
+    public TextRegion[] getRegionsOfImage(Image image, int limit) throws SQLException {
         PreparedStatement st = conn.prepareStatement(SELECT_REGIONS_OF_IMAGE_QUERY);
         st.setString(1, image.getImageId());
+        st.setInt(2, limit);
         ResultSet rs = st.executeQuery();
         if (!rs.next()) {
             return new TextRegion[] {};
