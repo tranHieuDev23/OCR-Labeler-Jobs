@@ -16,6 +16,7 @@ import org.quartz.impl.StdSchedulerFactory;
 import io.github.cdimascio.dotenv.Dotenv;
 import ocrlabeler.controllers.CraftJob;
 import ocrlabeler.controllers.DatabaseInstance;
+import ocrlabeler.controllers.DeleteExpiredExportsJob;
 import ocrlabeler.controllers.DumpJwtJob;
 import ocrlabeler.controllers.SuggestorJob;
 import ocrlabeler.controllers.Utils;
@@ -71,6 +72,14 @@ public class App {
         scheduler.scheduleJob(job, trigger);
     }
 
+    private static void scheduleDeleteExpiredExportsJob(Scheduler scheduler) throws SchedulerException {
+        JobDetail job = JobBuilder.newJob(DeleteExpiredExportsJob.class).withIdentity("DeleteExpiredExportsJob")
+                .build();
+        Trigger trigger = TriggerBuilder.newTrigger().withIdentity("DeleteExpiredExportsTrigger").startNow()
+                .withSchedule(CronScheduleBuilder.dailyAtHourAndMinute(3, 0)).build();
+        scheduler.scheduleJob(job, trigger);
+    }
+
     public static void main(String[] args) throws SchedulerException {
         waitForDB();
         resetAllProcessing();
@@ -83,5 +92,6 @@ public class App {
         scheduleJwtDumpJob(scheduler);
         scheduleCraftJob(scheduler, craftInterval);
         scheduleSuggestorJob(scheduler, suggestorInterval);
+        scheduleDeleteExpiredExportsJob(scheduler);
     }
 }
